@@ -1,0 +1,1 @@
+"""krabb dashboard package."""
