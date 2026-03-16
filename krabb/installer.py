@@ -8,7 +8,7 @@ SETTINGS_PATH = CLAUDE_DIR / "settings.json"
 KRABB_DIR = Path.home() / ".krabb"
 
 HOOK_ENTRY = {
-    "matcher": "WebFetch|WebSearch|Bash|Read|Write",
+    "matcher": "WebFetch|WebSearch|Bash|Read|Write|Edit",
     "hooks": [
         {
             "type": "command",
@@ -24,7 +24,9 @@ def _is_krabb_hook(entry: dict) -> bool:
     hooks = entry.get("hooks", [])
     return any(
         "localhost:4243" in h.get("command", "") or
-        h.get("url", "").startswith("http://localhost:4243")
+        "127.0.0.1:4243" in h.get("command", "") or
+        h.get("url", "").startswith("http://localhost:4243") or
+        h.get("url", "").startswith("http://127.0.0.1:4243")
         for h in hooks
     )
 
@@ -44,9 +46,13 @@ def install() -> bool:
     hooks = settings.setdefault("hooks", {})
     pre_tool_use = hooks.setdefault("PreToolUse", [])
 
-    # Check if krabb is already registered
-    for entry in pre_tool_use:
+    # Check if krabb is already registered — update matcher if needed
+    for i, entry in enumerate(pre_tool_use):
         if _is_krabb_hook(entry):
+            if entry.get("matcher") != HOOK_ENTRY["matcher"]:
+                pre_tool_use[i] = HOOK_ENTRY
+                SETTINGS_PATH.write_text(json.dumps(settings, indent=2) + "\n")
+                return True
             return False
 
     pre_tool_use.append(HOOK_ENTRY)

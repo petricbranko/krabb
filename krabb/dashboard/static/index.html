@@ -4,208 +4,224 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>krabb — dashboard</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>krabb</h1>
-      <span class="status" id="status">connecting...</span>
+      <div class="header-left">
+        <h1>krabb</h1>
+        <span class="header-sub">web access control for Claude Code</span>
+      </div>
+      <div class="header-right">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-text" id="status-text">connecting...</span>
+      </div>
     </header>
 
-    <div class="stats-bar">
-      <div class="stat-card">
-        <div class="label">Events today</div>
-        <div class="value" id="stat-total">—</div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="overview">Overview</button>
+      <button class="nav-tab" data-tab="events">Events</button>
+      <button class="nav-tab" data-tab="rules">Rules</button>
+      <button class="nav-tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <!-- Overview Tab -->
+    <div class="tab-content active" id="tab-overview">
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="label">Events today</div>
+          <div class="value" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Blocked today</div>
+          <div class="value" id="stat-blocked">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Top domain</div>
+          <div class="value stat-domain" id="stat-domain">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Active sessions</div>
+          <div class="value" id="stat-sessions">—</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="label">Blocked today</div>
-        <div class="value" id="stat-blocked">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Top domain</div>
-        <div class="value" id="stat-domain" style="font-size:14px">—</div>
+
+      <div class="overview-grid">
+        <div class="section">
+          <div class="section-header">
+            <span>Activity feed</span>
+            <span class="text-muted" id="feed-count"></span>
+          </div>
+          <div id="feed-filters" class="filter-chips"></div>
+          <div id="activity-feed" class="activity-feed">
+            <div class="empty">Loading...</div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-header">
+            <span>Tool breakdown</span>
+          </div>
+          <div id="tool-breakdown" class="tool-breakdown">
+            <div class="empty">Loading...</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-header">
-        <span>Blocklist</span>
+    <!-- Events Tab -->
+    <div class="tab-content" id="tab-events" style="display:none">
+      <div class="filter-bar">
+        <input type="search" id="search-input" placeholder="Search events...">
+        <select id="filter-tool">
+          <option value="">All tools</option>
+          <option value="WebFetch">WebFetch</option>
+          <option value="WebSearch">WebSearch</option>
+          <option value="Bash">Bash</option>
+          <option value="Read">Read</option>
+          <option value="Write">Write</option>
+          <option value="Edit">Edit</option>
+        </select>
+        <select id="filter-decision">
+          <option value="">All decisions</option>
+          <option value="allow">Allow</option>
+          <option value="deny">Deny</option>
+        </select>
+        <select id="filter-group">
+          <option value="">No grouping</option>
+          <option value="tool">Group by tool</option>
+          <option value="session">Group by session</option>
+          <option value="domain">Group by domain</option>
+        </select>
       </div>
-      <div class="allowlist-form">
-        <input type="text" id="pattern-input" placeholder="example.com, *.github.com, or /regex/">
-        <button class="btn-primary" onclick="addPattern()">Add</button>
+
+      <div id="events-tool-chips" class="filter-chips"></div>
+      <div class="events-layout">
+        <div class="events-table-container">
+          <div id="events-table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Tool</th>
+                  <th>Input</th>
+                  <th>Decision</th>
+                </tr>
+              </thead>
+              <tbody id="events-body">
+                <tr><td colspan="4" class="empty">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+        <div class="event-detail-panel" id="event-detail-panel">
+          <div class="detail-header">
+            <span class="detail-title">Event details</span>
+            <button class="btn-icon" id="close-detail">&times;</button>
+          </div>
+          <div id="detail-content"></div>
+        </div>
       </div>
-      <div id="allowlist-list"></div>
     </div>
 
-    <div class="section">
-      <div class="section-header">
-        <span>Recent events</span>
-        <span class="status" id="event-count"></span>
+    <!-- Rules Tab -->
+    <div class="tab-content" id="tab-rules" style="display:none">
+      <div class="rules-grid">
+        <div class="section">
+          <div class="section-header">
+            <span>Domain blocklist</span>
+            <span class="text-muted" id="blocklist-count"></span>
+          </div>
+          <div class="rule-form">
+            <input type="text" id="blocklist-input" placeholder="example.com, *.github.com, or /regex/">
+            <button class="btn-primary" id="blocklist-add">Add</button>
+          </div>
+          <div id="blocklist-list"></div>
+        </div>
+        <div class="section">
+          <div class="section-header">
+            <span>Protected files</span>
+            <span class="text-muted" id="protected-count"></span>
+          </div>
+          <div class="rule-form">
+            <input type="text" id="protected-input" placeholder="*.env, package-lock.json, src/config/">
+            <button class="btn-primary" id="protected-add">Add</button>
+          </div>
+          <div id="protected-list"></div>
+        </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Tool</th>
-            <th>Input</th>
-            <th>Decision</th>
-          </tr>
-        </thead>
-        <tbody id="events-body">
-          <tr><td colspan="4" class="empty">Loading...</td></tr>
-        </tbody>
-      </table>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="tab-settings" style="display:none">
+      <div class="section">
+        <div class="section-header"><span>Configuration</span></div>
+        <div class="settings-list">
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Default decision</div>
+              <div class="setting-desc">What happens to unmatched tool calls</div>
+            </div>
+            <select id="cfg-default-decision">
+              <option value="allow">allow</option>
+              <option value="deny">deny</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Log Bash commands</div>
+              <div class="setting-desc">Record Bash tool calls in event log</div>
+            </div>
+            <button class="toggle" id="cfg-log-bash" data-key="log_bash"></button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Log Read/Write</div>
+              <div class="setting-desc">Record file operation calls in event log</div>
+            </div>
+            <button class="toggle" id="cfg-log-reads" data-key="log_reads"></button>
+          </div>
+        </div>
+      </div>
+      <div class="section danger-section">
+        <div class="section-header"><span>Danger zone</span></div>
+        <div class="settings-list">
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Export events</div>
+              <div class="setting-desc">Download all events as a JSON file</div>
+            </div>
+            <button class="btn-secondary" id="btn-export">Export JSON</button>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Clear all events</div>
+              <div class="setting-desc">Permanently delete all logged events</div>
+            </div>
+            <button class="btn-danger" id="btn-clear">Clear events</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script>
-    const API = "http://127.0.0.1:4243";
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
 
-    function escapeHtml(str) {
-      const div = document.createElement("div");
-      div.textContent = str;
-      return div.innerHTML;
-    }
+  <!-- Modal overlay -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header" id="modal-title"></div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="modal-cancel">Cancel</button>
+        <button class="btn-danger" id="modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
 
-    function truncate(str, len) {
-      if (!str) return "";
-      return str.length > len ? str.slice(0, len) + "..." : str;
-    }
-
-    function formatTime(iso) {
-      if (!iso) return "";
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    }
-
-    function summarizeInput(tool, input) {
-      try {
-        const obj = typeof input === "string" ? JSON.parse(input) : input;
-        if (tool === "WebFetch") return obj.url || "";
-        if (tool === "WebSearch") return obj.query || "";
-        if (tool === "Bash") return obj.command || "";
-        if (tool === "Read" || tool === "Write") return obj.file_path || "";
-        return JSON.stringify(obj);
-      } catch {
-        return String(input);
-      }
-    }
-
-    async function fetchEvents() {
-      try {
-        const res = await fetch(API + "/events?limit=100");
-        const data = await res.json();
-        const tbody = document.getElementById("events-body");
-        const events = data.events || [];
-
-        document.getElementById("event-count").textContent = events.length + " shown";
-
-        if (events.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" class="empty">No events yet</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = events.map(e => {
-          const badge = e.decision === "allow"
-            ? '<span class="badge badge-allow">allow</span>'
-            : '<span class="badge badge-deny">deny</span>';
-          const summary = escapeHtml(truncate(summarizeInput(e.tool, e.input), 60));
-          return `<tr>
-            <td>${escapeHtml(formatTime(e.ts))}</td>
-            <td>${escapeHtml(e.tool)}</td>
-            <td class="input-truncated" title="${escapeHtml(summarizeInput(e.tool, e.input))}">${summary}</td>
-            <td>${badge}</td>
-          </tr>`;
-        }).join("");
-
-        document.getElementById("status").textContent = "live";
-      } catch {
-        document.getElementById("status").textContent = "hook offline";
-      }
-    }
-
-    async function fetchStats() {
-      try {
-        const res = await fetch(API + "/stats");
-        const data = await res.json();
-        document.getElementById("stat-total").textContent = data.total_today ?? "—";
-        document.getElementById("stat-blocked").textContent = data.blocked_today ?? "—";
-        document.getElementById("stat-domain").textContent = data.top_domain || "—";
-      } catch {
-        // ignore — stats are optional
-      }
-    }
-
-    async function fetchBlocklist() {
-      try {
-        const res = await fetch(API + "/blocklist");
-        const data = await res.json();
-        const container = document.getElementById("allowlist-list");
-        const patterns = data.patterns || [];
-
-        if (patterns.length === 0) {
-          container.innerHTML = '<div class="empty">No patterns — nothing blocked</div>';
-          return;
-        }
-
-        container.innerHTML = patterns.map(p =>
-          `<div class="allowlist-item">
-            <code>${escapeHtml(p)}</code>
-            <button class="btn-danger" onclick="removePattern('${escapeHtml(p)}')">Remove</button>
-          </div>`
-        ).join("");
-      } catch {
-        // ignore
-      }
-    }
-
-    async function addPattern() {
-      const input = document.getElementById("pattern-input");
-      const pattern = input.value.trim();
-      if (!pattern) return;
-
-      try {
-        await fetch(API + "/blocklist", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pattern }),
-        });
-        input.value = "";
-        fetchBlocklist();
-      } catch {
-        alert("Failed to add pattern — is the hook server running?");
-      }
-    }
-
-    async function removePattern(pattern) {
-      try {
-        await fetch(API + "/blocklist", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pattern }),
-        });
-        fetchBlocklist();
-      } catch {
-        alert("Failed to remove pattern — is the hook server running?");
-      }
-    }
-
-    // Allow Enter key in pattern input
-    document.getElementById("pattern-input").addEventListener("keydown", e => {
-      if (e.key === "Enter") addPattern();
-    });
-
-    // Initial fetch
-    fetchEvents();
-    fetchStats();
-    fetchBlocklist();
-
-    // Auto-refresh
-    setInterval(fetchEvents, 3000);
-    setInterval(fetchStats, 5000);
-    setInterval(fetchBlocklist, 10000);
-  </script>
+  <script src="components.js?v=3"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

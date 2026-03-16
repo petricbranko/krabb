@@ -4,12 +4,16 @@ Listens on localhost:4243 for POST requests from Claude Code hooks.
 Also serves GET /events and GET /blocklist for the dashboard.
 """
 
+from __future__ import annotations
+
 import json
+import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 from krabb import db
 from krabb.blocklist import check_domain
+from krabb.fileprotect import check_file_protected
 
 
 class HookHandler(BaseHTTPRequestHandler):
@@ -19,7 +23,7 @@ class HookHandler(BaseHTTPRequestHandler):
         """Suppress default stderr logging."""
         pass
 
-    def _send_json(self, data: dict, status: int = 200) -> None:
+    def _send_json(self, data: dict | list, status: int = 200) -> None:
         body = json.dumps(data).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -28,11 +32,23 @@ class HookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _read_body(self) -> bytes:
+        content_length = int(self.headers.get("Content-Length", 0))
+        return self.rfile.read(content_length)
+
+    def _parse_json_body(self) -> dict | None:
+        body = self._read_body()
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError:
+            self._send_json({"error": "invalid JSON"}, 400)
+            return None
+
     def do_OPTIONS(self):  # noqa: N802
         """Handle CORS preflight."""
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
@@ -43,13 +59,52 @@ class HookHandler(BaseHTTPRequestHandler):
 
         if path == "/events":
             limit = int(qs.get("limit", ["100"])[0])
+            offset = int(qs.get("offset", ["0"])[0])
             tool = qs.get("tool", [None])[0]
             decision = qs.get("decision", [None])[0]
-            events = db.get_events(limit=limit, tool=tool, decision=decision)
-            self._send_json({"events": events})
+            search = qs.get("search", [None])[0]
+            session_id = qs.get("session_id", [None])[0]
+            group_by = qs.get("group_by", [None])[0]
+
+            if group_by:
+                groups = db.get_events_grouped(group_by=group_by, limit=limit)
+                self._send_json({"groups": groups})
+            else:
+                events = db.get_events_paginated(
+                    limit=limit, offset=offset, tool=tool,
+                    decision=decision, search=search, session_id=session_id,
+                )
+                self._send_json({"events": events})
+
+        elif path == "/events/count":
+            tool = qs.get("tool", [None])[0]
+            decision = qs.get("decision", [None])[0]
+            search = qs.get("search", [None])[0]
+            session_id = qs.get("session_id", [None])[0]
+            count = db.get_event_count(
+                tool=tool, decision=decision,
+                search=search, session_id=session_id,
+            )
+            self._send_json({"count": count})
+
+        elif path == "/events/export":
+            events = db.export_events()
+            self._send_json(events)
+
+        elif re.match(r"^/events/(\d+)$", path):
+            event_id = int(re.match(r"^/events/(\d+)$", path).group(1))
+            event = db.get_event_by_id(event_id)
+            if event:
+                self._send_json({"event": event})
+            else:
+                self._send_json({"error": "not found"}, 404)
 
         elif path == "/blocklist":
-            patterns = db.get_blocklist()
+            patterns = db.get_blocklist_detailed()
+            self._send_json({"patterns": patterns})
+
+        elif path == "/protected-files":
+            patterns = db.get_protected_files()
             self._send_json({"patterns": patterns})
 
         elif path == "/config":
@@ -64,37 +119,8 @@ class HookHandler(BaseHTTPRequestHandler):
             self._send_json({"config": config})
 
         elif path == "/stats":
-            events_today = db.get_events(limit=10000)
-            from datetime import datetime, timezone
-
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            today_events = [e for e in events_today if e["ts"].startswith(today)]
-            blocked = [e for e in today_events if e["decision"] == "deny"]
-
-            # Most fetched domain
-            domains: dict[str, int] = {}
-            for e in today_events:
-                if e["tool"] in ("WebFetch", "WebSearch"):
-                    try:
-                        inp = json.loads(e["input"]) if isinstance(e["input"], str) else e["input"]
-                        url = inp.get("url") or inp.get("query", "")
-                        if url and "://" in url:
-                            from krabb.blocklist import extract_domain
-
-                            d = extract_domain(url)
-                            if d:
-                                domains[d] = domains.get(d, 0) + 1
-                    except (json.JSONDecodeError, AttributeError):
-                        pass
-
-            top_domain = max(domains, key=domains.get) if domains else None
-            self._send_json(
-                {
-                    "total_today": len(today_events),
-                    "blocked_today": len(blocked),
-                    "top_domain": top_domain,
-                }
-            )
+            stats = db.get_stats_sql()
+            self._send_json(stats)
 
         elif path == "/health":
             self._send_json({"status": "ok"})
@@ -103,13 +129,8 @@ class HookHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "not found"}, 404)
 
     def do_POST(self):  # noqa: N802
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length)
-
-        try:
-            payload = json.loads(body)
-        except json.JSONDecodeError:
-            self._send_json({"error": "invalid JSON"}, 400)
+        payload = self._parse_json_body()
+        if payload is None:
             return
 
         parsed = urlparse(self.path)
@@ -120,6 +141,16 @@ class HookHandler(BaseHTTPRequestHandler):
             pattern = payload.get("pattern", "")
             if pattern:
                 db.add_to_blocklist(pattern)
+                self._send_json({"ok": True})
+            else:
+                self._send_json({"error": "pattern required"}, 400)
+            return
+
+        # Dashboard protected files management
+        if path == "/protected-files":
+            pattern = payload.get("pattern", "")
+            if pattern:
+                db.add_protected_file(pattern)
                 self._send_json({"ok": True})
             else:
                 self._send_json({"error": "pattern required"}, 400)
@@ -152,7 +183,19 @@ class HookHandler(BaseHTTPRequestHandler):
                 return
             decision = "allow"
 
-        elif tool_name in ("Read", "Write"):
+        elif tool_name in ("Write", "Edit"):
+            file_path = tool_input.get("file_path", "")
+            protected = [p["pattern"] for p in db.get_protected_files()]
+            if file_path and protected and check_file_protected(file_path, protected):
+                decision = "deny"
+                reason = "File protected by krabb"
+            elif tool_name == "Write" and not log_reads:
+                self._send_json(_hook_response("allow"))
+                return
+            else:
+                decision = "allow"
+
+        elif tool_name == "Read":
             if not log_reads:
                 self._send_json(_hook_response("allow"))
                 return
@@ -172,17 +215,33 @@ class HookHandler(BaseHTTPRequestHandler):
 
         self._send_json(_hook_response(decision, reason))
 
+    def do_PUT(self):  # noqa: N802
+        payload = self._parse_json_body()
+        if payload is None:
+            return
+
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+
+        if path == "/config":
+            key = payload.get("key", "")
+            value = payload.get("value", "")
+            valid_keys = {"default_decision", "log_bash", "log_reads", "hook_port", "dashboard_port"}
+            if key in valid_keys and value:
+                db.set_config(key, value)
+                self._send_json({"ok": True})
+            else:
+                self._send_json({"error": "invalid key or value"}, 400)
+        else:
+            self._send_json({"error": "not found"}, 404)
+
     def do_DELETE(self):  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
         if path == "/blocklist":
-            content_length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(content_length)
-            try:
-                payload = json.loads(body)
-            except json.JSONDecodeError:
-                self._send_json({"error": "invalid JSON"}, 400)
+            payload = self._parse_json_body()
+            if payload is None:
                 return
             pattern = payload.get("pattern", "")
             if pattern:
@@ -190,6 +249,22 @@ class HookHandler(BaseHTTPRequestHandler):
                 self._send_json({"ok": True})
             else:
                 self._send_json({"error": "pattern required"}, 400)
+
+        elif path == "/protected-files":
+            payload = self._parse_json_body()
+            if payload is None:
+                return
+            pattern = payload.get("pattern", "")
+            if pattern:
+                db.remove_protected_file(pattern)
+                self._send_json({"ok": True})
+            else:
+                self._send_json({"error": "pattern required"}, 400)
+
+        elif path == "/events":
+            count = db.clear_events()
+            self._send_json({"ok": True, "deleted": count})
+
         else:
             self._send_json({"error": "not found"}, 404)
 

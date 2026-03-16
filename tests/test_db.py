@@ -32,6 +32,7 @@ class TestInitDb:
         conn.close()
         assert "events" in tables
         assert "allowlist" in tables
+        assert "protected_files" in tables
         assert "config" in tables
 
     def test_seeds_default_config(self, tmp_db):
@@ -133,3 +134,133 @@ class TestConfig:
         db.init_db()
         db.set_config("default_decision", "deny")
         assert db.get_config("default_decision") == "deny"
+
+
+class TestProtectedFiles:
+    def test_add_and_get(self, tmp_db):
+        db.init_db()
+        db.add_protected_file("*.env")
+        db.add_protected_file("package-lock.json")
+        patterns = db.get_protected_files()
+        pattern_names = [p["pattern"] for p in patterns]
+        assert "*.env" in pattern_names
+        assert "package-lock.json" in pattern_names
+
+    def test_remove(self, tmp_db):
+        db.init_db()
+        db.add_protected_file("*.env")
+        db.remove_protected_file("*.env")
+        patterns = db.get_protected_files()
+        assert len(patterns) == 0
+
+    def test_add_duplicate_ignored(self, tmp_db):
+        db.init_db()
+        db.add_protected_file("*.env")
+        db.add_protected_file("*.env")
+        patterns = db.get_protected_files()
+        assert len(patterns) == 1
+
+    def test_has_timestamps(self, tmp_db):
+        db.init_db()
+        db.add_protected_file("*.env")
+        patterns = db.get_protected_files()
+        assert "added" in patterns[0]
+
+
+class TestPaginatedEvents:
+    def test_offset_and_limit(self, tmp_db):
+        db.init_db()
+        for i in range(20):
+            db.log_event(None, None, "Bash", {"command": f"cmd{i}"}, "allow")
+        events = db.get_events_paginated(limit=5, offset=5)
+        assert len(events) == 5
+
+    def test_search(self, tmp_db):
+        db.init_db()
+        db.log_event(None, None, "Bash", {"command": "ls -la"}, "allow")
+        db.log_event(None, None, "Bash", {"command": "cat foo"}, "allow")
+        events = db.get_events_paginated(search="ls")
+        assert len(events) == 1
+
+    def test_session_filter(self, tmp_db):
+        db.init_db()
+        db.log_event("s1", None, "Bash", {"command": "ls"}, "allow")
+        db.log_event("s2", None, "Bash", {"command": "pwd"}, "allow")
+        events = db.get_events_paginated(session_id="s1")
+        assert len(events) == 1
+        assert events[0]["session_id"] == "s1"
+
+
+class TestEventCount:
+    def test_total(self, tmp_db):
+        db.init_db()
+        for i in range(5):
+            db.log_event(None, None, "Bash", {"command": f"cmd{i}"}, "allow")
+        assert db.get_event_count() == 5
+
+    def test_filtered(self, tmp_db):
+        db.init_db()
+        db.log_event(None, None, "Bash", {"command": "ls"}, "allow")
+        db.log_event(None, None, "WebFetch", {"url": "https://x.com"}, "deny", "blocked")
+        assert db.get_event_count(decision="deny") == 1
+
+
+class TestEventById:
+    def test_found(self, tmp_db):
+        db.init_db()
+        db.log_event(None, None, "Bash", {"command": "ls"}, "allow")
+        events = db.get_events(limit=1)
+        event = db.get_event_by_id(events[0]["id"])
+        assert event is not None
+        assert event["tool"] == "Bash"
+
+    def test_not_found(self, tmp_db):
+        db.init_db()
+        assert db.get_event_by_id(99999) is None
+
+
+class TestClearAndExport:
+    def test_clear(self, tmp_db):
+        db.init_db()
+        for i in range(3):
+            db.log_event(None, None, "Bash", {"command": f"cmd{i}"}, "allow")
+        deleted = db.clear_events()
+        assert deleted == 3
+        assert db.get_event_count() == 0
+
+    def test_export(self, tmp_db):
+        db.init_db()
+        for i in range(3):
+            db.log_event(None, None, "Bash", {"command": f"cmd{i}"}, "allow")
+        events = db.export_events()
+        assert len(events) == 3
+
+
+class TestBlocklistDetailed:
+    def test_returns_timestamps(self, tmp_db):
+        db.init_db()
+        db.add_to_blocklist("example.com")
+        detailed = db.get_blocklist_detailed()
+        assert len(detailed) == 1
+        assert detailed[0]["pattern"] == "example.com"
+        assert "added" in detailed[0]
+
+
+class TestGroupedEvents:
+    def test_group_by_tool(self, tmp_db):
+        db.init_db()
+        db.log_event(None, None, "Bash", {"command": "ls"}, "allow")
+        db.log_event(None, None, "Bash", {"command": "pwd"}, "allow")
+        db.log_event(None, None, "Read", {"file_path": "/x"}, "allow")
+        groups = db.get_events_grouped("tool")
+        assert len(groups) == 2
+        bash_group = next(g for g in groups if g["key"] == "Bash")
+        assert bash_group["count"] == 2
+
+    def test_group_by_session(self, tmp_db):
+        db.init_db()
+        db.log_event("s1", "proj1", "Bash", {"command": "ls"}, "allow")
+        db.log_event("s1", "proj1", "Bash", {"command": "pwd"}, "allow")
+        db.log_event("s2", "proj2", "Read", {"file_path": "/x"}, "allow")
+        groups = db.get_events_grouped("session")
+        assert len(groups) == 2
