@@ -7,7 +7,7 @@ var API = "http://127.0.0.1:4243";
 var state = {
   tab: "overview",
   events: { data: [], total: 0, page: 1, pageSize: 50 },
-  filters: { tool: "", decision: "", search: "", group_by: "" },
+  filters: { tool: "", decision: "", search: "", group_by: "", date_from: "", date_to: "" },
   selectedEvent: null,
   detailOpen: false,
   config: {},
@@ -203,6 +203,8 @@ function buildEventsQuery() {
   if (state.filters.tool) params.push("tool=" + encodeURIComponent(state.filters.tool));
   if (state.filters.decision) params.push("decision=" + encodeURIComponent(state.filters.decision));
   if (state.filters.search) params.push("search=" + encodeURIComponent(state.filters.search));
+  if (state.filters.date_from) params.push("date_from=" + encodeURIComponent(state.filters.date_from));
+  if (state.filters.date_to) params.push("date_to=" + encodeURIComponent(state.filters.date_to));
   if (state.filters.group_by) params.push("group_by=" + encodeURIComponent(state.filters.group_by));
   return "?" + params.join("&");
 }
@@ -226,6 +228,8 @@ function fetchEvents() {
   if (state.filters.tool) countParams.push("tool=" + encodeURIComponent(state.filters.tool));
   if (state.filters.decision) countParams.push("decision=" + encodeURIComponent(state.filters.decision));
   if (state.filters.search) countParams.push("search=" + encodeURIComponent(state.filters.search));
+  if (state.filters.date_from) countParams.push("date_from=" + encodeURIComponent(state.filters.date_from));
+  if (state.filters.date_to) countParams.push("date_to=" + encodeURIComponent(state.filters.date_to));
   var countQ = countParams.length > 0 ? "?" + countParams.join("&") : "";
   api.get("/events/count" + countQ).then(function (data) {
     state.events.total = data.count || 0;
@@ -485,6 +489,18 @@ document.getElementById("filter-tool").addEventListener("change", function () {
 
 document.getElementById("filter-decision").addEventListener("change", function () {
   state.filters.decision = this.value;
+  state.events.page = 1;
+  fetchEvents();
+});
+
+document.getElementById("filter-date-from").addEventListener("change", function () {
+  state.filters.date_from = this.value;
+  state.events.page = 1;
+  fetchEvents();
+});
+
+document.getElementById("filter-date-to").addEventListener("change", function () {
+  state.filters.date_to = this.value;
   state.events.page = 1;
   fetchEvents();
 });

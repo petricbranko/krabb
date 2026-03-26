@@ -1,59 +1,65 @@
 :root {
-  --bg: #f8f9fa;
-  --bg-card: #ffffff;
-  --bg-hover: #f0f1f3;
-  --bg-active: #e8e9eb;
-  --text: #1a1a2e;
-  --text-muted: #6c757d;
-  --border: #dee2e6;
+  --bg: #0a0a0b;
+  --bg-card: #161618;
+  --bg-hover: #1c1c1e;
+  --bg-active: #252528;
+  --text: #e4e4e7;
+  --text-muted: #a1a1aa;
+  --text-subtle: #71717a;
+  --text-faint: #52525b;
+  --border: #27272a;
+  --border-light: #3f3f46;
   --accent: #4361ee;
-  --accent-muted: rgba(67, 97, 238, 0.08);
-  --green: #2d6a4f;
-  --green-bg: #d8f3dc;
-  --red: #9b2226;
-  --red-bg: #fde8e8;
-  --yellow: #b58900;
-  --yellow-bg: #fef3cd;
-  --font: "SF Mono", "Fira Code", "JetBrains Mono", ui-monospace, monospace;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-  --radius-sm: 4px;
-  --radius-md: 8px;
+  --accent-hover: #5b78f0;
+  --accent-muted: rgba(67, 97, 238, 0.1);
+  --green: #3fb950;
+  --green-bg: rgba(63, 185, 80, 0.1);
+  --red: #f85149;
+  --red-bg: rgba(248, 81, 73, 0.1);
+  --yellow: #d29922;
+  --yellow-bg: rgba(210, 153, 34, 0.1);
+  --font: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", ui-monospace, monospace;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --radius-sm: 6px;
+  --radius-md: 10px;
   --transition: 150ms ease;
   --sidebar-width: 360px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --bg-card: #161b22;
-    --bg-hover: #1c2128;
-    --bg-active: #21262d;
-    --text: #e6edf3;
-    --text-muted: #7d8590;
-    --border: #30363d;
-    --accent: #58a6ff;
-    --accent-muted: rgba(88, 166, 255, 0.1);
-    --green: #3fb950;
-    --green-bg: #0d2818;
-    --red: #f85149;
-    --red-bg: #2d1215;
-    --yellow: #d29922;
-    --yellow-bg: #2e2208;
-  }
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-light) transparent;
+}
+
+::selection {
+  background: rgba(67, 97, 238, 0.3);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 3px;
 }
 
 body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -83,6 +89,7 @@ header h1 {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.5px;
+  font-family: var(--font-mono);
 }
 
 .header-sub {
@@ -133,7 +140,7 @@ header h1 {
 
 .nav-tab {
   padding: 10px 20px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
   background: none;
@@ -141,8 +148,7 @@ header h1 {
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: color var(--transition), border-color var(--transition);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   font-family: var(--font);
 }
 
@@ -176,11 +182,16 @@ header h1 {
 
 .stat-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(39, 39, 42, 0.6);
   border-radius: var(--radius-md);
   padding: 16px;
   min-width: 0;
   overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.stat-card:hover {
+  border-color: rgba(63, 63, 70, 0.8);
 }
 
 .stat-card .label {
@@ -207,7 +218,7 @@ header h1 {
 
 .section {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(39, 39, 42, 0.6);
   border-radius: var(--radius-md);
   margin-bottom: 24px;
   overflow: hidden;
@@ -354,13 +365,13 @@ header h1 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 20px;
   background: var(--bg);
   color: var(--text-muted);
   font-family: var(--font);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition);
@@ -404,19 +415,30 @@ header h1 {
   flex-wrap: wrap;
 }
 
-.filter-bar input[type="search"] {
-  flex: 1;
-  min-width: 180px;
+.filter-bar input[type="search"],
+.filter-bar input[type="date"] {
   padding: 7px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-card);
   color: var(--text);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 13px;
+  transition: border-color var(--transition);
 }
 
-.filter-bar input[type="search"]:focus {
+.filter-bar input[type="search"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.filter-bar input[type="date"] {
+  min-width: 130px;
+  color-scheme: dark;
+}
+
+.filter-bar input[type="search"]:focus,
+.filter-bar input[type="date"]:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -428,8 +450,9 @@ header h1 {
   background: var(--bg-card);
   color: var(--text);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
+  transition: border-color var(--transition);
 }
 
 .filter-bar select:focus {
@@ -454,7 +477,7 @@ header h1 {
   width: 0;
   overflow: hidden;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(39, 39, 42, 0.6);
   border-radius: var(--radius-md);
   transition: width 200ms ease, padding 200ms ease, opacity 200ms ease;
   flex-shrink: 0;
@@ -476,7 +499,7 @@ header h1 {
 
 #events-table-wrapper {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(39, 39, 42, 0.6);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -501,6 +524,7 @@ td {
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   font-size: 12px;
+  font-family: var(--font-mono);
 }
 
 tr:last-child td {
@@ -594,6 +618,7 @@ tbody tr.selected {
 .json-viewer {
   font-size: 11px;
   line-height: 1.6;
+  font-family: var(--font-mono);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -614,11 +639,12 @@ tbody tr.selected {
 
 .badge {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
+  padding: 2px 10px;
+  border-radius: 20px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
+  font-family: var(--font-mono);
 }
 
 .badge-allow {
@@ -712,8 +738,9 @@ tbody tr.selected {
   border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font);
+  font-family: var(--font-mono);
   font-size: 12px;
+  transition: border-color var(--transition);
 }
 
 .rule-form input:focus {
@@ -786,7 +813,13 @@ tbody tr.selected {
   background: var(--bg-card);
   color: var(--text);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 13px;
+  transition: border-color var(--transition);
+}
+
+.setting-row select:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .danger-section {
@@ -837,7 +870,7 @@ tbody tr.selected {
 
 button {
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -847,10 +880,12 @@ button {
   color: #fff;
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .btn-secondary {
@@ -859,11 +894,12 @@ button {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
 }
 
 .btn-secondary:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--border-light);
+  background: var(--bg-hover);
 }
 
 .btn-danger {
@@ -872,6 +908,7 @@ button {
   color: var(--red);
   border: 1px solid var(--red);
   border-radius: var(--radius-sm);
+  transition: background var(--transition);
 }
 
 .btn-danger:hover {
@@ -974,7 +1011,9 @@ button {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 2000;
   align-items: center;
   justify-content: center;
@@ -1032,7 +1071,7 @@ button {
 }
 
 code {
-  font-family: var(--font);
+  font-family: var(--font-mono);
 }
 
 /* ---- Responsive ---- */
@@ -1067,7 +1106,8 @@ code {
     flex-direction: column;
   }
 
-  .filter-bar input[type="search"] {
+  .filter-bar input[type="search"],
+  .filter-bar input[type="date"] {
     min-width: 100%;
   }
 }

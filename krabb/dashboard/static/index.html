@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>krabb — dashboard</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <div class="container">
@@ -87,6 +90,8 @@
           <option value="allow">Allow</option>
           <option value="deny">Deny</option>
         </select>
+        <input type="date" id="filter-date-from" title="From date">
+        <input type="date" id="filter-date-to" title="To date">
         <select id="filter-group">
           <option value="">No grouping</option>
           <option value="tool">Group by tool</option>
@@ -221,7 +226,7 @@
     </div>
   </div>
 
-  <script src="components.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="components.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

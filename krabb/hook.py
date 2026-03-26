@@ -65,6 +65,8 @@ class HookHandler(BaseHTTPRequestHandler):
             search = qs.get("search", [None])[0]
             session_id = qs.get("session_id", [None])[0]
             group_by = qs.get("group_by", [None])[0]
+            date_from = qs.get("date_from", [None])[0]
+            date_to = qs.get("date_to", [None])[0]
 
             if group_by:
                 groups = db.get_events_grouped(group_by=group_by, limit=limit)
@@ -73,6 +75,7 @@ class HookHandler(BaseHTTPRequestHandler):
                 events = db.get_events_paginated(
                     limit=limit, offset=offset, tool=tool,
                     decision=decision, search=search, session_id=session_id,
+                    date_from=date_from, date_to=date_to,
                 )
                 self._send_json({"events": events})
 
@@ -81,9 +84,12 @@ class HookHandler(BaseHTTPRequestHandler):
             decision = qs.get("decision", [None])[0]
             search = qs.get("search", [None])[0]
             session_id = qs.get("session_id", [None])[0]
+            date_from = qs.get("date_from", [None])[0]
+            date_to = qs.get("date_to", [None])[0]
             count = db.get_event_count(
                 tool=tool, decision=decision,
                 search=search, session_id=session_id,
+                date_from=date_from, date_to=date_to,
             )
             self._send_json({"count": count})
 

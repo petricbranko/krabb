@@ -252,6 +252,8 @@ def _build_event_filter(
     decision: str | None = None,
     search: str | None = None,
     session_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ) -> tuple[str, list[str]]:
     """Build WHERE clause and params for event queries."""
     clauses: list[str] = []
@@ -268,6 +270,12 @@ def _build_event_filter(
     if session_id:
         clauses.append("session_id = ?")
         params.append(session_id)
+    if date_from:
+        clauses.append("ts >= ?")
+        params.append(date_from)
+    if date_to:
+        clauses.append("ts < ?")
+        params.append(date_to + "T99")  # ensures entire day is included
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     return where, params
 
@@ -279,11 +287,15 @@ def get_events_paginated(
     decision: str | None = None,
     search: str | None = None,
     session_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ) -> list[dict]:
     """Return events with pagination and optional filters."""
     conn = _connect()
     try:
-        where, params = _build_event_filter(tool, decision, search, session_id)
+        where, params = _build_event_filter(
+            tool, decision, search, session_id, date_from, date_to,
+        )
         query = f"SELECT * FROM events{where} ORDER BY id DESC LIMIT ? OFFSET ?"
         params.extend([str(limit), str(offset)])
         rows = conn.execute(query, params).fetchall()
@@ -297,11 +309,15 @@ def get_event_count(
     decision: str | None = None,
     search: str | None = None,
     session_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ) -> int:
     """Return total count of events matching filters."""
     conn = _connect()
     try:
-        where, params = _build_event_filter(tool, decision, search, session_id)
+        where, params = _build_event_filter(
+            tool, decision, search, session_id, date_from, date_to,
+        )
         row = conn.execute(
             f"SELECT COUNT(*) as cnt FROM events{where}", params
         ).fetchone()
