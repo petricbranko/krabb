@@ -256,6 +256,33 @@ def cmd_blocklist(args: argparse.Namespace) -> None:
         print(_green(f"Removed: {args.pattern}"))
 
 
+def cmd_commands(args: argparse.Namespace) -> None:
+    action = args.action
+
+    if action == "list":
+        patterns = db.get_blocked_commands()
+        if not patterns:
+            print(_dim("No blocked commands — nothing blocked."))
+        else:
+            print(_bold(f"Blocked commands ({len(patterns)} patterns):"))
+            for p in patterns:
+                print(f"  {p}")
+
+    elif action == "add":
+        if not args.pattern:
+            print(_red("Error: pattern required"))
+            sys.exit(1)
+        db.add_blocked_command(args.pattern)
+        print(_green(f"Added: {args.pattern}"))
+
+    elif action == "remove":
+        if not args.pattern:
+            print(_red("Error: pattern required"))
+            sys.exit(1)
+        db.remove_blocked_command(args.pattern)
+        print(_green(f"Removed: {args.pattern}"))
+
+
 def cmd_proxy(_args: argparse.Namespace) -> None:
     """Read hook JSON from stdin, POST to hook server, print response."""
     import urllib.request
@@ -330,6 +357,10 @@ def main() -> None:
     al_p.add_argument("action", choices=["list", "add", "remove"])
     al_p.add_argument("pattern", nargs="?", default=None)
 
+    cmd_p = sub.add_parser("commands", help="Manage blocked commands")
+    cmd_p.add_argument("action", choices=["list", "add", "remove"])
+    cmd_p.add_argument("pattern", nargs="?", default=None)
+
     hook_p = sub.add_parser("hook", help="Run the hook server")
     hook_p.add_argument("-d", "--daemon", action="store_true", help="Run in background")
     sub.add_parser("proxy", help="Stdin/stdout proxy for Claude Code hooks")
@@ -351,6 +382,7 @@ def main() -> None:
         "logs": cmd_logs,
         "dashboard": cmd_dashboard,
         "blocklist": cmd_blocklist,
+        "commands": cmd_commands,
         "hook": cmd_hook,
         "proxy": cmd_proxy,
         "uninstall": cmd_uninstall,

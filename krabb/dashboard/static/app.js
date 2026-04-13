@@ -598,6 +598,58 @@ function removeProtectedFile(pattern) {
   }).catch(function () { showToast("Failed to remove pattern", "error"); });
 }
 
+function fetchBlockedCommands() {
+  api.get("/blocked-commands").then(function (data) {
+    var patterns = data.patterns || [];
+    var container = document.getElementById("commands-list");
+    document.getElementById("commands-count").textContent = patterns.length + " patterns";
+
+    if (patterns.length === 0) {
+      container.innerHTML = '<div class="empty">No blocked commands</div>';
+      return;
+    }
+
+    var html = '<table class="commands-table"><thead><tr>' +
+      '<th>Type</th><th>Pattern</th><th>Added</th><th></th>' +
+      '</tr></thead><tbody>';
+    html += patterns.map(function (p) {
+      var pat = typeof p === "object" ? p.pattern : p;
+      var added = typeof p === "object" && p.added ? formatDate(p.added) : "—";
+      var type = "prefix";
+      if (pat.startsWith("tool:")) type = "tool";
+      else if (pat.startsWith("/") && pat.endsWith("/") && pat.length > 2) type = "regex";
+      else if (pat.indexOf("*") !== -1 || pat.indexOf("?") !== -1) type = "glob";
+      var typeBadge = '<span class="cmd-type cmd-type-' + type + '">' + type + '</span>';
+      return '<tr>' +
+        '<td>' + typeBadge + '</td>' +
+        '<td><code>' + escapeHtml(pat) + '</code></td>' +
+        '<td class="text-muted">' + escapeHtml(added) + '</td>' +
+        '<td class="cmd-actions"><button class="btn-sm btn-danger" onclick="removeBlockedCommand(\'' + escapeHtml(pat).replace(/'/g, "\\'") + '\')">Remove</button></td>' +
+        '</tr>';
+    }).join("");
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }).catch(function () {});
+}
+
+function addBlockedCommand() {
+  var input = document.getElementById("commands-input");
+  var pattern = input.value.trim();
+  if (!pattern) return;
+  api.post("/blocked-commands", { pattern: pattern }).then(function () {
+    input.value = "";
+    showToast("Command blocked: " + pattern);
+    fetchBlockedCommands();
+  }).catch(function () { showToast("Failed to add pattern", "error"); });
+}
+
+function removeBlockedCommand(pattern) {
+  api.del("/blocked-commands", { pattern: pattern }).then(function () {
+    showToast("Pattern removed");
+    fetchBlockedCommands();
+  }).catch(function () { showToast("Failed to remove pattern", "error"); });
+}
+
 document.getElementById("blocklist-add").addEventListener("click", addBlocklistPattern);
 document.getElementById("blocklist-input").addEventListener("keydown", function (e) {
   if (e.key === "Enter") addBlocklistPattern();
@@ -605,6 +657,10 @@ document.getElementById("blocklist-input").addEventListener("keydown", function 
 document.getElementById("protected-add").addEventListener("click", addProtectedFile);
 document.getElementById("protected-input").addEventListener("keydown", function (e) {
   if (e.key === "Enter") addProtectedFile();
+});
+document.getElementById("commands-add").addEventListener("click", addBlockedCommand);
+document.getElementById("commands-input").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") addBlockedCommand();
 });
 
 // ---- Settings Tab ----
@@ -684,7 +740,7 @@ function setStatus(status) {
 function refreshCurrentTab() {
   if (state.tab === "overview") fetchOverview();
   else if (state.tab === "events") fetchEvents();
-  else if (state.tab === "rules") { fetchBlocklist(); fetchProtectedFiles(); }
+  else if (state.tab === "rules") { fetchBlocklist(); fetchProtectedFiles(); fetchBlockedCommands(); }
   else if (state.tab === "settings") fetchConfig();
 }
 
@@ -698,5 +754,5 @@ setInterval(function () {
 }, 3000);
 
 setInterval(function () {
-  if (state.tab === "rules") { fetchBlocklist(); fetchProtectedFiles(); }
+  if (state.tab === "rules") { fetchBlocklist(); fetchProtectedFiles(); fetchBlockedCommands(); }
 }, 10000);

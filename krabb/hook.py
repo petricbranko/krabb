@@ -13,6 +13,7 @@ from urllib.parse import urlparse, parse_qs
 
 from krabb import db
 from krabb.blocklist import check_domain
+from krabb.commandblock import check_command_blocked
 from krabb.fileprotect import check_file_protected
 
 
@@ -113,6 +114,10 @@ class HookHandler(BaseHTTPRequestHandler):
             patterns = db.get_protected_files()
             self._send_json({"patterns": patterns})
 
+        elif path == "/blocked-commands":
+            patterns = db.get_blocked_commands_detailed()
+            self._send_json({"patterns": patterns})
+
         elif path == "/config":
             keys = [
                 "default_decision",
@@ -162,6 +167,16 @@ class HookHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": "pattern required"}, 400)
             return
 
+        # Dashboard blocked commands management
+        if path == "/blocked-commands":
+            pattern = payload.get("pattern", "")
+            if pattern:
+                db.add_blocked_command(pattern)
+                self._send_json({"ok": True})
+            else:
+                self._send_json({"error": "pattern required"}, 400)
+            return
+
         # Hook handler — process tool use events
         session_id = payload.get("session_id")
         tool_name = payload.get("tool_name", "")
@@ -173,6 +188,25 @@ class HookHandler(BaseHTTPRequestHandler):
         default_decision = db.get_config("default_decision") or "allow"
         log_bash = db.get_config("log_bash") == "true"
         log_reads = db.get_config("log_reads") == "true"
+
+        # Check blocked commands first (applies to all tools)
+        blocked_patterns = db.get_blocked_commands()
+        if blocked_patterns:
+            command = tool_input.get("command", "")
+            matched = check_command_blocked(tool_name, command, blocked_patterns)
+            if matched:
+                decision = "deny"
+                reason = f"Command blocked by krabb: {matched}"
+                db.log_event(
+                    session_id=session_id,
+                    project=payload.get("project"),
+                    tool=tool_name,
+                    tool_input=tool_input,
+                    decision=decision,
+                    reason=reason,
+                )
+                self._send_json(_hook_response(decision, reason))
+                return
 
         if tool_name in ("WebFetch", "WebSearch"):
             url = tool_input.get("url") or tool_input.get("query", "")
@@ -263,6 +297,17 @@ class HookHandler(BaseHTTPRequestHandler):
             pattern = payload.get("pattern", "")
             if pattern:
                 db.remove_protected_file(pattern)
+                self._send_json({"ok": True})
+            else:
+                self._send_json({"error": "pattern required"}, 400)
+
+        elif path == "/blocked-commands":
+            payload = self._parse_json_body()
+            if payload is None:
+                return
+            pattern = payload.get("pattern", "")
+            if pattern:
+                db.remove_blocked_command(pattern)
                 self._send_json({"ok": True})
             else:
                 self._send_json({"error": "pattern required"}, 400)

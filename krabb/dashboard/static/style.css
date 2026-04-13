@@ -1074,6 +1074,77 @@ code {
   font-family: var(--font-mono);
 }
 
+/* ---- Blocked commands table ---- */
+
+.commands-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.commands-table th {
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.commands-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.commands-table tr:last-child td {
+  border-bottom: none;
+}
+
+.commands-table tbody tr {
+  transition: background var(--transition);
+}
+
+.commands-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.commands-table .cmd-actions {
+  text-align: right;
+}
+
+.cmd-type {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-family: var(--font-mono);
+}
+
+.cmd-type-tool {
+  color: var(--red);
+  background: var(--red-bg);
+}
+
+.cmd-type-regex {
+  color: var(--yellow);
+  background: var(--yellow-bg);
+}
+
+.cmd-type-glob {
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.cmd-type-prefix {
+  color: var(--text-muted);
+  background: var(--bg-hover);
+}
+
 /* ---- Responsive ---- */
 
 @media (max-width: 768px) {

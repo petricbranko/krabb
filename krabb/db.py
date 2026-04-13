@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS protected_files (
     added   TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS blocked_commands (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern TEXT NOT NULL UNIQUE,
+    added   TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS config (
     key     TEXT PRIMARY KEY,
     value   TEXT NOT NULL
@@ -464,6 +470,58 @@ def export_events() -> list[dict]:
     conn = _connect()
     try:
         rows = conn.execute("SELECT * FROM events ORDER BY id DESC").fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Blocked commands
+# ---------------------------------------------------------------------------
+
+
+def add_blocked_command(pattern: str) -> None:
+    """Add a command pattern to the blocked commands list."""
+    conn = _connect()
+    try:
+        conn.execute(
+            "INSERT OR IGNORE INTO blocked_commands (pattern, added) VALUES (?, ?)",
+            (pattern, datetime.now(timezone.utc).isoformat()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def remove_blocked_command(pattern: str) -> None:
+    """Remove a command pattern from the blocked commands list."""
+    conn = _connect()
+    try:
+        conn.execute("DELETE FROM blocked_commands WHERE pattern = ?", (pattern,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_blocked_commands() -> list[str]:
+    """Return all blocked command patterns."""
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT pattern FROM blocked_commands ORDER BY id"
+        ).fetchall()
+        return [r["pattern"] for r in rows]
+    finally:
+        conn.close()
+
+
+def get_blocked_commands_detailed() -> list[dict]:
+    """Return all blocked command patterns with timestamps."""
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT pattern, added FROM blocked_commands ORDER BY id"
+        ).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()

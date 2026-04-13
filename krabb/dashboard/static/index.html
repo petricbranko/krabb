@@ -156,6 +156,20 @@
           <div id="protected-list"></div>
         </div>
       </div>
+      <div class="section" style="margin-top: 1.5rem;">
+        <div class="section-header">
+          <span>Blocked commands</span>
+          <span class="text-muted" id="commands-count"></span>
+        </div>
+        <div class="rule-form">
+          <input type="text" id="commands-input" placeholder="rm -rf *, tool:WebFetch, /drop table/i, git push --force*">
+          <button class="btn-primary" id="commands-add">Add</button>
+        </div>
+        <div class="rule-hint text-muted" style="font-size: 0.75rem; padding: 8px 16px 0; color: var(--text-subtle);">
+          Patterns: <code>tool:Name</code> blocks a tool, <code>/regex/</code> for regex, <code>*</code> for glob, or prefix match
+        </div>
+        <div id="commands-list"></div>
+      </div>
     </div>
 
     <!-- Settings Tab -->
